@@ -9,56 +9,87 @@ const Projects = () => {
   const sectionRef = useRef<HTMLElement>(null)
   const trackRef = useRef<HTMLDivElement>(null)
   const [activeProject, setActiveProject] = useState<number | null>(null)
-  const [isHoveringTrack, setIsHoveringTrack] = useState(false)
+  const [mouseX, setMouseX] = useState(0)
+  const [isInSection, setIsInSection] = useState(false)
+  const scrollTriggerRef = useRef<ScrollTrigger | null>(null)
 
   useEffect(() => {
     const ctx = gsap.context(() => {
       const track = trackRef.current
-      if (!track) return
+      if (track) {
+        const scrollWidth = track.scrollWidth - window.innerWidth + 100
 
-      // Fluid tilt animation on scroll (not tied to horizontal scroll)
-      const cards = track.querySelectorAll('.project-card')
-      
-      ScrollTrigger.create({
-        trigger: sectionRef.current,
-        start: 'top bottom',
-        end: 'bottom top',
-        onUpdate: (self) => {
-          const velocity = self.getVelocity()
-          const skewAmount = Math.min(Math.max(velocity / 400, -6), 6)
-          gsap.to(cards, {
-            skewX: skewAmount,
-            duration: 0.4,
-            ease: 'power2.out'
-          })
-        }
-      })
+        // Create the horizontal scroll animation
+        const tween = gsap.to(track, {
+          x: -scrollWidth,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: 'top top',
+            end: () => `+=${scrollWidth}`,
+            scrub: 1,
+            pin: true,
+            anticipatePin: 1,
+          }
+        })
+
+        scrollTriggerRef.current = tween.scrollTrigger as ScrollTrigger
+
+        // Card skew based on scroll velocity
+        const cards = track.querySelectorAll('.project-card')
+        ScrollTrigger.create({
+          trigger: sectionRef.current,
+          start: 'top top',
+          end: () => `+=${scrollWidth}`,
+          onUpdate: (self) => {
+            const velocity = self.getVelocity()
+            const skewAmount = Math.min(Math.max(velocity / 500, -5), 5)
+            gsap.to(cards, {
+              skewX: skewAmount,
+              duration: 0.3,
+              ease: 'power2.out'
+            })
+          }
+        })
+      }
     }, sectionRef)
 
     return () => ctx.revert()
   }, [])
 
-  // Handle wheel events for hover-to-scroll
+  // Track mouse position and enable/disable scroll trigger
   useEffect(() => {
-    const track = trackRef.current
-    if (!track) return
+    const handleMouseMove = (e: MouseEvent) => {
+      setMouseX(e.clientX)
+      
+      const section = sectionRef.current
+      if (!section || !scrollTriggerRef.current) return
 
-    const handleWheel = (e: WheelEvent) => {
-      if (!isHoveringTrack) return
-      
-      // Check if we can scroll further
-      const atLeft = track.scrollLeft === 0 && e.deltaY < 0
-      const atRight = track.scrollLeft >= track.scrollWidth - track.clientWidth - 1 && e.deltaY > 0
-      
-      if (!atLeft && !atRight) {
-        e.preventDefault()
-        track.scrollLeft += e.deltaY
+      const rect = section.getBoundingClientRect()
+      const inSection = e.clientY >= rect.top && e.clientY <= rect.bottom
+      setIsInSection(inSection)
+
+      // Only on desktop (width > 1024px)
+      if (window.innerWidth > 1024 && inSection) {
+        const centerStart = window.innerWidth * 0.25  // 25% from left
+        const centerEnd = window.innerWidth * 0.75    // 75% from left (50% center dead zone)
+        
+        const inCenterZone = e.clientX > centerStart && e.clientX < centerEnd
+        
+        if (inCenterZone) {
+          scrollTriggerRef.current.disable()
+        } else {
+          scrollTriggerRef.current.enable()
+        }
+      } else if (window.innerWidth <= 1024) {
+        // Always enabled on mobile/tablet
+        scrollTriggerRef.current.enable()
       }
     }
 
-    window.addEventListener('wheel', handleWheel, { passive: false })
-    return () => window.removeEventListener('wheel', handleWheel)
-  }, [isHoveringTrack])
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [])
 
   const projects = [
     {
@@ -103,7 +134,7 @@ const Projects = () => {
     <section 
       ref={sectionRef}
       id="projects"
-      className="section-container relative min-h-screen bg-frutiger-light overflow-hidden py-20"
+      className="section-container relative min-h-screen bg-frutiger-light overflow-hidden"
     >
       {/* Background particles */}
       <div className="absolute inset-0 pointer-events-none">
@@ -121,40 +152,35 @@ const Projects = () => {
         ))}
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="h-screen flex flex-col justify-center">
         {/* Section Header */}
-        <div className="mb-12">
-          <span className="inline-block px-4 py-2 glass-card rounded-full text-sm font-medium text-frutiger-blue mb-4">
-            Portfolio
-          </span>
-          <h2 className="text-4xl lg:text-5xl font-bold text-frutiger-dark mb-4">
-            Selected <span className="text-gradient">Works</span>
-          </h2>
-          <p className="text-lg text-frutiger-dark/70 max-w-xl">
-            A collection of projects that showcase my passion for creating beautiful, functional digital experiences.
-          </p>
+        <div className="px-4 sm:px-6 lg:px-8 mb-12">
+          <div className="max-w-7xl mx-auto">
+            <span className="inline-block px-4 py-2 glass-card rounded-full text-sm font-medium text-frutiger-blue mb-4">
+              Portfolio
+            </span>
+            <h2 className="text-4xl lg:text-5xl font-bold text-frutiger-dark mb-4">
+              Selected <span className="text-gradient">Works</span>
+            </h2>
+            <p className="text-lg text-frutiger-dark/70 max-w-xl">
+              A collection of projects that showcase my passion for creating beautiful, functional digital experiences.
+            </p>
+          </div>
         </div>
 
         {/* Horizontal Scroll Track */}
         <div 
           ref={trackRef}
-          className="flex gap-8 overflow-x-auto pb-4 scrollbar-hide cursor-grab active:cursor-grabbing"
-          style={{ 
-            scrollbarWidth: 'none', 
-            msOverflowStyle: 'none',
-            WebkitOverflowScrolling: 'touch'
-          }}
-          onMouseEnter={() => setIsHoveringTrack(true)}
-          onMouseLeave={() => setIsHoveringTrack(false)}
+          className="flex gap-8 px-4 sm:px-6 lg:px-8 will-change-transform"
         >
           {/* Spacer */}
-          <div className="flex-shrink-0 w-[5vw] lg:w-[10vw]" />
+          <div className="flex-shrink-0 w-[10vw]" />
 
           {/* Project Cards */}
           {projects.map((project, index) => (
             <div
               key={index}
-              className="project-card flex-shrink-0 w-[85vw] sm:w-[60vw] md:w-[45vw] lg:w-[40vw]"
+              className="project-card flex-shrink-0 w-[80vw] md:w-[50vw] lg:w-[40vw]"
               onMouseEnter={() => setActiveProject(index)}
               onMouseLeave={() => setActiveProject(null)}
             >
@@ -223,23 +249,19 @@ const Projects = () => {
           ))}
 
           {/* End Spacer */}
-          <div className="flex-shrink-0 w-[5vw] lg:w-[10vw]" />
+          <div className="flex-shrink-0 w-[10vw]" />
         </div>
 
-        {/* Scroll Hint */}
-        <div className="mt-6 flex items-center justify-center gap-2 text-sm text-frutiger-dark/60 lg:hidden">
-          <span>← Swipe to explore →</span>
-        </div>
-        <div className="mt-6 hidden lg:flex items-center justify-center gap-2 text-sm text-frutiger-dark/60">
-          <span>Hover over projects and scroll to navigate</span>
+        {/* Scroll Indicator */}
+        <div className="px-4 sm:px-6 lg:px-8 mt-8">
+          <div className="max-w-7xl mx-auto flex items-center gap-4">
+            <div className="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
+              <div className="h-full w-1/3 bg-gradient-to-r from-frutiger-blue to-frutiger-cyan rounded-full animate-pulse" />
+            </div>
+            <span className="text-sm text-frutiger-dark/60">Scroll to explore</span>
+          </div>
         </div>
       </div>
-
-      <style>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </section>
   )
 }
