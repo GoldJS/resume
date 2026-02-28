@@ -1,3 +1,5 @@
+// MusicPlayer.tsx - Complete fixed version
+
 import { useState, useRef, useEffect } from 'react'
 import { Music, Volume2, VolumeX, Play, Pause, SkipForward, SkipBack } from 'lucide-react'
 import { gsap } from 'gsap'
@@ -14,6 +16,7 @@ const MusicPlayer = () => {
   const playerRef = useRef<HTMLDivElement>(null)
   const bubbleRef = useRef<HTMLButtonElement>(null)
   const popupRef = useRef<HTMLDivElement>(null)
+  const waveContainerRef = useRef<HTMLDivElement>(null)
 
   const playlist = [
     {
@@ -122,8 +125,17 @@ const MusicPlayer = () => {
 
   const togglePlay = () => setIsPlaying(!isPlaying)
   const toggleMute = () => setIsMuted(!isMuted)
-  const nextTrack = () => setCurrentTrack((prev) => (prev + 1) % playlist.length)
-  const prevTrack = () => setCurrentTrack((prev) => (prev - 1 + playlist.length) % playlist.length)
+  
+  // FIXED: Use functional updates and prevent event bubbling
+  const nextTrack = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setCurrentTrack((prev) => (prev + 1) % playlist.length)
+  }
+  
+  const prevTrack = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setCurrentTrack((prev) => (prev - 1 + playlist.length) % playlist.length)
+  }
 
   useEffect(() => {
     if (!isExpanded) return
@@ -158,29 +170,46 @@ const MusicPlayer = () => {
           <Music className="w-4 h-4 text-white" />
         </div>
 
-        <div className="flex items-end gap-0.5 h-6 flex-1">
-          {[...Array(4)].map((_, i) => (
+        {/* FIXED: Wave animation with stable keys and CSS classes */}
+        <div ref={waveContainerRef} className="flex items-end gap-0.5 h-6 flex-1">
+          {[0, 1, 2, 3].map((i) => (
             <div
-              key={i}
-              className={`w-1 bg-frutiger-blue rounded-full transition-all duration-300 ${isPlaying && !isMuted ? 'h-full animate-wave' : 'h-1'}`}
-              style={{
+              key={`wave-${i}`}
+              className={`w-1 bg-frutiger-blue rounded-full ${
+                isPlaying && !isMuted ? 'animate-wave' : 'h-1'
+              }`}
+              style={{ 
                 animationDelay: `${i * 0.1}s`,
+                height: isPlaying && !isMuted ? '16px' : '4px'
               }}
             />
           ))}
         </div>
 
-        <div className="flex items-center gap-1">
-          <button onClick={prevTrack} className="p-1.5 hover:bg-white/20 rounded-xl transition-colors">
+        {/* FIXED: Added stopPropagation to all buttons */}
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <button 
+            onClick={prevTrack} 
+            className="p-1.5 hover:bg-white/20 rounded-xl transition-colors active:bg-white/30"
+          >
             <SkipBack className="w-3 h-3 text-frutiger-dark" />
           </button>
-          <button onClick={togglePlay} className="p-2 hover:bg-white/20 rounded-xl transition-colors">
+          <button 
+            onClick={togglePlay} 
+            className="p-2 hover:bg-white/20 rounded-xl transition-colors active:bg-white/30"
+          >
             {isPlaying ? <Pause className="w-4 h-4 text-frutiger-dark" /> : <Play className="w-4 h-4 text-frutiger-dark" />}
           </button>
-          <button onClick={nextTrack} className="p-1.5 hover:bg-white/20 rounded-xl transition-colors">
+          <button 
+            onClick={nextTrack} 
+            className="p-1.5 hover:bg-white/20 rounded-xl transition-colors active:bg-white/30"
+          >
             <SkipForward className="w-3 h-3 text-frutiger-dark" />
           </button>
-          <button onClick={toggleMute} className="p-2 hover:bg-white/20 rounded-xl transition-colors ml-1">
+          <button 
+            onClick={toggleMute} 
+            className="p-2 hover:bg-white/20 rounded-xl transition-colors ml-1 active:bg-white/30"
+          >
             {isMuted ? <VolumeX className="w-4 h-4 text-frutiger-dark/50" /> : <Volume2 className="w-4 h-4 text-frutiger-dark" />}
           </button>
         </div>
@@ -203,21 +232,21 @@ const MusicPlayer = () => {
 
       {/* Mobile */}
       <div className="lg:hidden">
-        {/* Hero player - FIXED: Lower z-index when not in navbar */}
+        {/* Hero player - Lower z-index when not in navbar */}
         <div 
           ref={playerRef}
-          className={`fixed bottom-6 right-6 z-40 will-change-transform ${
-            isInNavbar ? 'pointer-events-none' : ''
+          className={`fixed bottom-6 right-6 transition-all duration-300 ${
+            isInNavbar ? 'z-30 opacity-0 pointer-events-none' : 'z-40 opacity-100'
           }`}
           style={{ transform: 'translateX(0)' }}
         >
           <PlayerContent />
         </div>
 
-        {/* Navbar bubble - FIXED: Higher z-index and correct positioning */}
+        {/* Navbar bubble - Higher z-index */}
         <div 
-          className={`fixed top-5 right-14 z-50 transition-all duration-500 ease-out ${
-            isInNavbar ? 'translate-y-0 opacity-100' : '-translate-y-20 opacity-0 pointer-events-none'
+          className={`fixed top-5 right-14 transition-all duration-500 ease-out ${
+            isInNavbar ? 'z-50 translate-y-0 opacity-100' : 'z-30 -translate-y-20 opacity-0 pointer-events-none'
           }`}
         >
           {/* Popup */}
