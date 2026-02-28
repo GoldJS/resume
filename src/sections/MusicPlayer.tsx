@@ -9,6 +9,7 @@ const MusicPlayer = () => {
   const [currentTrack, setCurrentTrack] = useState(0)
   const [isExpanded, setIsExpanded] = useState(false)
   const [isInNavbar, setIsInNavbar] = useState(false)
+  const [progress, setProgress] = useState(0)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const playerRef = useRef<HTMLDivElement>(null)
   const bubbleRef = useRef<HTMLButtonElement>(null)
@@ -29,6 +30,22 @@ const MusicPlayer = () => {
     }
   ]
 
+  // Track individual song progress
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    const updateProgress = () => {
+      if (audio.duration) {
+        const percent = (audio.currentTime / audio.duration) * 100
+        setProgress(percent)
+      }
+    }
+
+    audio.addEventListener('timeupdate', updateProgress)
+    return () => audio.removeEventListener('timeupdate', updateProgress)
+  }, [currentTrack])
+
   // Scroll-linked animation
   useEffect(() => {
     const handleScroll = () => {
@@ -39,7 +56,6 @@ const MusicPlayer = () => {
       const heroHeight = heroRect.height
       const scrollProgress = Math.max(0, Math.min(1, -heroRect.top / (heroHeight * 0.5)))
       
-      // Move player to right based on scroll (0 to 100%)
       gsap.to(playerRef.current, {
         x: scrollProgress * window.innerWidth,
         opacity: 1 - scrollProgress,
@@ -47,7 +63,6 @@ const MusicPlayer = () => {
         ease: 'none'
       })
 
-      // When mostly scrolled, show in navbar
       if (scrollProgress > 0.8 && !isInNavbar) {
         setIsInNavbar(true)
       } else if (scrollProgress <= 0.8 && isInNavbar) {
@@ -82,6 +97,7 @@ const MusicPlayer = () => {
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.src = playlist[currentTrack].url
+      setProgress(0)
       if (isPlaying && !isMuted) {
         audioRef.current.play().catch(() => setIsPlaying(false))
       }
@@ -109,7 +125,6 @@ const MusicPlayer = () => {
   const nextTrack = () => setCurrentTrack((prev) => (prev + 1) % playlist.length)
   const prevTrack = () => setCurrentTrack((prev) => (prev - 1 + playlist.length) % playlist.length)
 
-  // Close only when clicking outside both bubble AND popup
   useEffect(() => {
     if (!isExpanded) return
     
@@ -123,7 +138,6 @@ const MusicPlayer = () => {
       }
     }
 
-    // Use capture phase to catch clicks before they bubble
     document.addEventListener('click', handleClick, true)
     return () => document.removeEventListener('click', handleClick, true)
   }, [isExpanded])
@@ -191,7 +205,7 @@ const MusicPlayer = () => {
 
       {/* Mobile */}
       <div className="lg:hidden">
-        {/* Hero player - scroll linked animation */}
+        {/* Hero player */}
         <div 
           ref={playerRef}
           className="fixed bottom-6 right-6 z-50 will-change-transform"
@@ -200,9 +214,9 @@ const MusicPlayer = () => {
           <PlayerContent />
         </div>
 
-        {/* Navbar bubble */}
+        {/* Navbar bubble - moved to right-28 for better spacing */}
         <div 
-          className={`fixed top-4 right-20 z-50 transition-all duration-500 ease-out ${
+          className={`fixed top-4 right-28 z-50 transition-all duration-500 ease-out ${
             isInNavbar ? 'translate-y-0 opacity-100' : '-translate-y-20 opacity-0 pointer-events-none'
           }`}
         >
@@ -216,14 +230,22 @@ const MusicPlayer = () => {
             <PlayerContent />
           </div>
 
-          {/* Circle button */}
+          {/* Circle button with individual song progress */}
           <button
             ref={bubbleRef}
             onClick={() => setIsExpanded(!isExpanded)}
             className="relative w-10 h-10 glass-card-strong rounded-full flex items-center justify-center active:scale-95 transition-transform"
           >
+            {/* Progress ring - individual song progress */}
             <svg className="absolute inset-0 w-full h-full -rotate-90">
-              <circle cx="20" cy="20" r="18" fill="none" stroke="rgba(0, 168, 232, 0.2)" strokeWidth="2" />
+              <circle 
+                cx="20" 
+                cy="20" 
+                r="18" 
+                fill="none" 
+                stroke="rgba(0, 168, 232, 0.2)" 
+                strokeWidth="2" 
+              />
               <circle
                 cx="20"
                 cy="20"
@@ -231,13 +253,16 @@ const MusicPlayer = () => {
                 fill="none"
                 stroke="#00a8e8"
                 strokeWidth="2"
-                strokeDasharray={`${isPlaying ? 75 : 0} 100`}
-                className="transition-all duration-1000"
+                strokeLinecap="round"
+                strokeDasharray={`${progress * 1.13} 113`}
+                className="transition-all duration-300"
               />
             </svg>
             
-            <Music className={`w-5 h-5 text-frutiger-dark relative z-10 ${isPlaying ? 'animate-pulse' : ''}`} />
+            {/* Music icon - slightly smaller to fit inside ring */}
+            <Music className={`w-4 h-4 text-frutiger-dark relative z-10 ${isPlaying ? 'animate-pulse' : ''}`} />
             
+            {/* Playing indicator dot */}
             {isPlaying && !isExpanded && (
               <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-frutiger-cyan rounded-full animate-pulse border-2 border-white" />
             )}
