@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Music, Volume2, VolumeX, Play, Pause, SkipForward, SkipBack } from 'lucide-react'
+import { gsap } from 'gsap'
 
 const MusicPlayer = () => {
   const [isPlaying, setIsPlaying] = useState(false)
@@ -7,8 +8,9 @@ const MusicPlayer = () => {
   const [showTooltip, setShowTooltip] = useState(true)
   const [currentTrack, setCurrentTrack] = useState(0)
   const [isExpanded, setIsExpanded] = useState(false)
-  const [showHeroPlayer, setShowHeroPlayer] = useState(true)
+  const [isInNavbar, setIsInNavbar] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const playerRef = useRef<HTMLDivElement>(null)
   const bubbleRef = useRef<HTMLButtonElement>(null)
   const popupRef = useRef<HTMLDivElement>(null)
 
@@ -27,20 +29,37 @@ const MusicPlayer = () => {
     }
   ]
 
+  // Scroll-linked animation
   useEffect(() => {
-    const heroSection = document.getElementById('hero')
-    if (!heroSection) return
+    const handleScroll = () => {
+      const heroSection = document.getElementById('hero')
+      if (!heroSection || !playerRef.current) return
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setShowHeroPlayer(entry.isIntersecting)
-      },
-      { threshold: 0.5 } // Trigger earlier - when 50% visible
-    )
+      const heroRect = heroSection.getBoundingClientRect()
+      const heroHeight = heroRect.height
+      const scrollProgress = Math.max(0, Math.min(1, -heroRect.top / (heroHeight * 0.5)))
+      
+      // Move player to right based on scroll (0 to 100%)
+      gsap.to(playerRef.current, {
+        x: scrollProgress * window.innerWidth,
+        opacity: 1 - scrollProgress,
+        duration: 0.1,
+        ease: 'none'
+      })
 
-    observer.observe(heroSection)
-    return () => observer.disconnect()
-  }, [])
+      // When mostly scrolled, show in navbar
+      if (scrollProgress > 0.8 && !isInNavbar) {
+        setIsInNavbar(true)
+      } else if (scrollProgress <= 0.8 && isInNavbar) {
+        setIsInNavbar(false)
+        setIsExpanded(false)
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll()
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [isInNavbar])
 
   useEffect(() => {
     audioRef.current = new Audio(playlist[currentTrack].url)
@@ -92,24 +111,21 @@ const MusicPlayer = () => {
 
   // Close only when clicking outside both bubble AND popup
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    if (!isExpanded) return
+    
+    const handleClick = (e: MouseEvent) => {
       const target = e.target as Node
-      const clickedBubble = bubbleRef.current?.contains(target)
-      const clickedPopup = popupRef.current?.contains(target)
+      const isInsideBubble = bubbleRef.current?.contains(target)
+      const isInsidePopup = popupRef.current?.contains(target)
       
-      // Only close if clicked outside both
-      if (!clickedBubble && !clickedPopup) {
+      if (!isInsideBubble && !isInsidePopup) {
         setIsExpanded(false)
       }
     }
-    
-    if (isExpanded) {
-      // Small delay to avoid immediate closing
-      setTimeout(() => {
-        document.addEventListener('click', handleClickOutside)
-      }, 100)
-      return () => document.removeEventListener('click', handleClickOutside)
-    }
+
+    // Use capture phase to catch clicks before they bubble
+    document.addEventListener('click', handleClick, true)
+    return () => document.removeEventListener('click', handleClick, true)
   }, [isExpanded])
 
   const PlayerContent = () => (
@@ -175,27 +191,30 @@ const MusicPlayer = () => {
 
       {/* Mobile */}
       <div className="lg:hidden">
-        {/* Hero player */}
+        {/* Hero player - scroll linked animation */}
         <div 
-          className={`fixed bottom-6 right-6 z-50 transition-all duration-500 ease-out ${
-            showHeroPlayer ? 'translate-x-0 opacity-100' : 'translate-x-[150vw] opacity-0'
-          }`}
+          ref={playerRef}
+          className="fixed bottom-6 right-6 z-50 will-change-transform"
+          style={{ transform: 'translateX(0)' }}
         >
           <PlayerContent />
         </div>
 
-        {/* Navbar bubble - moved to right-20 to clear menu */}
+        {/* Navbar bubble */}
         <div 
           className={`fixed top-4 right-20 z-50 transition-all duration-500 ease-out ${
-            !showHeroPlayer ? 'translate-y-0 opacity-100' : '-translate-y-20 opacity-0 pointer-events-none'
+            isInNavbar ? 'translate-y-0 opacity-100' : '-translate-y-20 opacity-0 pointer-events-none'
           }`}
         >
           {/* Popup */}
-          {isExpanded && (
-            <div ref={popupRef} className="absolute top-full right-0 mt-2">
-              <PlayerContent />
-            </div>
-          )}
+          <div 
+            ref={popupRef}
+            className={`absolute top-full right-0 mt-2 transition-all duration-300 ${
+              isExpanded ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-2 pointer-events-none'
+            }`}
+          >
+            <PlayerContent />
+          </div>
 
           {/* Circle button */}
           <button
