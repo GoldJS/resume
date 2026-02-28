@@ -162,11 +162,9 @@ const MusicPlayer = () => {
           {[...Array(4)].map((_, i) => (
             <div
               key={i}
-              className={`w-1 bg-frutiger-blue rounded-full transition-all duration-300 ${isPlaying && !isMuted ? 'animate-wave' : 'h-1'}`}
+              className={`w-1 bg-frutiger-blue rounded-full transition-all duration-300 ${isPlaying && !isMuted ? 'h-full animate-wave' : 'h-1'}`}
               style={{
-                height: isPlaying && !isMuted ? '100%' : '4px',
                 animationDelay: `${i * 0.1}s`,
-                animation: isPlaying && !isMuted ? `wave 0.5s ease-in-out infinite ${i * 0.1}s` : 'none'
               }}
             />
           ))}
@@ -205,16 +203,18 @@ const MusicPlayer = () => {
 
       {/* Mobile */}
       <div className="lg:hidden">
-        {/* Hero player */}
+        {/* Hero player - FIXED: Lower z-index when not in navbar */}
         <div 
           ref={playerRef}
-          className="fixed bottom-6 right-6 z-50 will-change-transform"
+          className={`fixed bottom-6 right-6 z-40 will-change-transform ${
+            isInNavbar ? 'pointer-events-none' : ''
+          }`}
           style={{ transform: 'translateX(0)' }}
         >
           <PlayerContent />
         </div>
 
-        {/* Navbar bubble - FIXED POSITION: top-5 right-14 */}
+        {/* Navbar bubble - FIXED: Higher z-index and correct positioning */}
         <div 
           className={`fixed top-5 right-14 z-50 transition-all duration-500 ease-out ${
             isInNavbar ? 'translate-y-0 opacity-100' : '-translate-y-20 opacity-0 pointer-events-none'
@@ -230,13 +230,13 @@ const MusicPlayer = () => {
             <PlayerContent />
           </div>
 
-          {/* Circle button - FIXED: smaller size, better spacing */}
+          {/* Circle button */}
           <button
             ref={bubbleRef}
             onClick={() => setIsExpanded(!isExpanded)}
             className="relative w-9 h-9 glass-card-strong rounded-full flex items-center justify-center active:scale-95 transition-transform"
           >
-            {/* Progress ring - FIXED: r=15 so icon doesn't touch edges */}
+            {/* Progress ring */}
             <svg className="absolute inset-0 w-full h-full -rotate-90">
               <circle 
                 cx="18" 
@@ -259,7 +259,7 @@ const MusicPlayer = () => {
               />
             </svg>
             
-            {/* Icon - FIXED: centered with proper sizing */}
+            {/* Icon */}
             <div className="relative z-10 flex items-center justify-center w-full h-full">
               <Music className={`w-3.5 h-3.5 text-frutiger-dark ${isPlaying ? 'animate-pulse' : ''}`} />
             </div>
