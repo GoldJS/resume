@@ -7,13 +7,10 @@ const MusicPlayer = () => {
   const [isMuted, setIsMuted] = useState(false)
   const [showTooltip, setShowTooltip] = useState(true)
   const [currentTrack, setCurrentTrack] = useState(0)
-  const [progress, setProgress] = useState(0)
-  const [isMinimized, setIsMinimized] = useState(false)
-  
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const playerRef = useRef<HTMLDivElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
 
+  // Playlist of tracks - replace these URLs with your actual music files
   const playlist = [
     {
       url: '/music/Infinity Frequencies - Traces.mp3',
@@ -21,44 +18,24 @@ const MusicPlayer = () => {
     },
     {
       url: '/music/Mii Editor - Mii Maker (Wii U) Music.mp3',
-      title: 'Mii Editor'
+      title: 'Mii Editor in Mii Maker (Wii U)'
     },
     {
       url: '/music/scizzie - aquatic ambience.mp3',
-      title: 'Aquatic Ambience'
+      title: 'Aquatic Ambience - scizzie'
     }
   ]
 
-  // Progress tracking
   useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-
-    const updateProgress = () => {
-      if (audio.duration) {
-        const percent = (audio.currentTime / audio.duration) * 100
-        setProgress(percent)
-      }
-    }
-
-    audio.addEventListener('timeupdate', updateProgress)
-    return () => audio.removeEventListener('timeupdate', updateProgress)
-  }, [currentTrack])
-
-  // Initialize audio
-  useEffect(() => {
+    // Initialize audio with first track
     audioRef.current = new Audio(playlist[currentTrack].url)
     audioRef.current.loop = true
     audioRef.current.volume = 0.3
 
+    // Hide tooltip after 5 seconds
     const tooltipTimer = setTimeout(() => {
       setShowTooltip(false)
     }, 5000)
-
-    gsap.fromTo(playerRef.current,
-      { x: 100, opacity: 0 },
-      { x: 0, opacity: 1, duration: 1, ease: 'power3.out', delay: 3 }
-    )
 
     return () => {
       clearTimeout(tooltipTimer)
@@ -69,26 +46,27 @@ const MusicPlayer = () => {
     }
   }, [])
 
-  // Handle track changes
+  // Handle track change
   useEffect(() => {
     if (audioRef.current) {
-      const wasPlaying = isPlaying && !isMuted
       audioRef.current.src = playlist[currentTrack].url
-      setProgress(0)
-      if (wasPlaying) {
-        audioRef.current.play().catch(() => setIsPlaying(false))
+      if (isPlaying && !isMuted) {
+        audioRef.current.play().catch(() => {
+          setIsPlaying(false)
+        })
       }
     }
   }, [currentTrack])
 
-  // Handle play/pause/mute
   useEffect(() => {
-    if (!audioRef.current) return
-    
-    if (isPlaying && !isMuted) {
-      audioRef.current.play().catch(() => setIsPlaying(false))
-    } else {
-      audioRef.current.pause()
+    if (audioRef.current) {
+      if (isPlaying && !isMuted) {
+        audioRef.current.play().catch(() => {
+          setIsPlaying(false)
+        })
+      } else {
+        audioRef.current.pause()
+      }
     }
   }, [isPlaying, isMuted])
 
@@ -98,176 +76,122 @@ const MusicPlayer = () => {
     }
   }, [isMuted])
 
-  // Smooth scroll to minimize/restore
   useEffect(() => {
-    const handleScroll = () => {
-      const heroSection = document.getElementById('hero')
-      if (!heroSection || !containerRef.current) return
+    gsap.fromTo(playerRef.current,
+      { x: 100, opacity: 0 },
+      { x: 0, opacity: 1, duration: 1, ease: 'power3.out', delay: 3 }
+    )
+  }, [])
 
-      const heroRect = heroSection.getBoundingClientRect()
-      const heroHeight = heroRect.height
-      const scrollProgress = Math.max(0, Math.min(1, -heroRect.top / (heroHeight * 0.5)))
-      
-      // Smooth transition using GSAP instead of state toggling
-      if (scrollProgress > 0.8 && !isMinimized) {
-        setIsMinimized(true)
-        gsap.to(containerRef.current, {
-          width: 48,
-          height: 48,
-          duration: 0.4,
-          ease: 'power2.inOut'
-        })
-      } else if (scrollProgress <= 0.8 && isMinimized) {
-        setIsMinimized(false)
-        gsap.to(containerRef.current, {
-          width: 280,
-          height: 'auto',
-          duration: 0.4,
-          ease: 'power2.inOut'
-        })
-      }
-    }
+  const togglePlay = () => {
+    setIsPlaying(!isPlaying)
+  }
 
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    handleScroll()
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [isMinimized])
+  const toggleMute = () => {
+    setIsMuted(!isMuted)
+  }
 
-  const togglePlay = () => setIsPlaying(!isPlaying)
-  const toggleMute = () => setIsMuted(!isMuted)
-  const nextTrack = () => setCurrentTrack((prev) => (prev + 1) % playlist.length)
-  const prevTrack = () => setCurrentTrack((prev) => (prev - 1 + playlist.length) % playlist.length)
+  const nextTrack = () => {
+    setCurrentTrack((prev) => (prev + 1) % playlist.length)
+  }
 
-  // Full player content
-  const FullPlayer = () => (
-    <div className="glass-card-strong p-3 rounded-2xl flex flex-col gap-2">
-      <div className="flex items-center justify-between px-1">
-        <span className="text-xs text-frutiger-dark/70 font-medium">
-          {currentTrack + 1} / {playlist.length}
-        </span>
-        <span className="text-xs text-frutiger-dark truncate max-w-[120px]">
-          {playlist[currentTrack].title}
-        </span>
-      </div>
+  const prevTrack = () => {
+    setCurrentTrack((prev) => (prev - 1 + playlist.length) % playlist.length)
+  }
 
-      <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-xl bg-gradient-to-br from-frutiger-blue to-frutiger-cyan ${isPlaying ? 'animate-pulse' : ''}`}>
-          <Music className="w-4 h-4 text-white" />
+  return (
+    <div 
+      ref={playerRef}
+      className="fixed bottom-6 right-6 z-50"
+    >
+      {/* Tooltip */}
+      {showTooltip && (
+        <div className="absolute bottom-full right-0 mb-3 glass-card-strong px-4 py-2 rounded-xl whitespace-nowrap animate-bounce">
+          <span className="text-sm text-frutiger-dark">Click to play Frutiger music!</span>
+          <div className="absolute -bottom-2 right-6 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-white/30" />
+        </div>
+      )}
+
+      {/* Player */}
+      <div className="glass-card-strong p-3 rounded-2xl flex flex-col gap-2">
+        {/* Track Info */}
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs text-frutiger-dark/70 font-medium">
+            {currentTrack + 1} / {playlist.length}
+          </span>
+          <span className="text-xs text-frutiger-dark truncate max-w-[120px]">
+            {playlist[currentTrack].title}
+          </span>
         </div>
 
-        <div className="flex items-end gap-0.5 h-6 flex-1">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className={`w-1 bg-frutiger-blue rounded-full ${
-                isPlaying && !isMuted ? 'animate-wave' : ''
-              }`}
-              style={{ 
-                height: isPlaying && !isMuted ? '16px' : '4px',
-                animationDelay: `${i * 0.15}s`,
-                transition: 'height 0.2s ease'
-              }}
-            />
-          ))}
-        </div>
+        <div className="flex items-center gap-3">
+          {/* Music Icon */}
+          <div className={`p-2 rounded-xl bg-gradient-to-br from-frutiger-blue to-frutiger-cyan ${isPlaying ? 'animate-pulse' : ''}`}>
+            <Music className="w-4 h-4 text-white" />
+          </div>
 
-        <div className="flex items-center gap-1">
-          <button onClick={prevTrack} className="p-1.5 hover:bg-white/20 rounded-xl transition-colors">
-            <SkipBack className="w-3 h-3 text-frutiger-dark" />
-          </button>
-          <button onClick={togglePlay} className="p-2 hover:bg-white/20 rounded-xl transition-colors">
-            {isPlaying ? <Pause className="w-4 h-4 text-frutiger-dark" /> : <Play className="w-4 h-4 text-frutiger-dark" />}
-          </button>
-          <button onClick={nextTrack} className="p-1.5 hover:bg-white/20 rounded-xl transition-colors">
-            <SkipForward className="w-3 h-3 text-frutiger-dark" />
-          </button>
-          <button onClick={toggleMute} className="p-2 hover:bg-white/20 rounded-xl transition-colors ml-1">
-            {isMuted ? <VolumeX className="w-4 h-4 text-frutiger-dark/50" /> : <Volume2 className="w-4 h-4 text-frutiger-dark" />}
-          </button>
+          {/* Visualizer */}
+          <div className="flex items-end gap-0.5 h-6 flex-1">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className={`w-1 bg-frutiger-blue rounded-full transition-all duration-300 ${
+                  isPlaying && !isMuted ? 'animate-wave' : 'h-1'
+                }`}
+                style={{
+                  height: isPlaying && !isMuted ? '100%' : '4px',
+                  animationDelay: `${i * 0.1}s`,
+                  animation: isPlaying && !isMuted ? `wave 0.5s ease-in-out infinite ${i * 0.1}s` : 'none'
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={prevTrack}
+              className="p-1.5 hover:bg-white/20 rounded-xl transition-colors"
+              aria-label="Previous track"
+            >
+              <SkipBack className="w-3 h-3 text-frutiger-dark" />
+            </button>
+
+            <button
+              onClick={togglePlay}
+              className="p-2 hover:bg-white/20 rounded-xl transition-colors"
+              aria-label={isPlaying ? 'Pause' : 'Play'}
+            >
+              {isPlaying ? (
+                <Pause className="w-4 h-4 text-frutiger-dark" />
+              ) : (
+                <Play className="w-4 h-4 text-frutiger-dark" />
+              )}
+            </button>
+
+            <button
+              onClick={nextTrack}
+              className="p-1.5 hover:bg-white/20 rounded-xl transition-colors"
+              aria-label="Next track"
+            >
+              <SkipForward className="w-3 h-3 text-frutiger-dark" />
+            </button>
+
+            <button
+              onClick={toggleMute}
+              className="p-2 hover:bg-white/20 rounded-xl transition-colors ml-1"
+              aria-label={isMuted ? 'Unmute' : 'Mute'}
+            >
+              {isMuted ? (
+                <VolumeX className="w-4 h-4 text-frutiger-dark/50" />
+              ) : (
+                <Volume2 className="w-4 h-4 text-frutiger-dark" />
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  )
-
-  // Minimized ball with progress ring
-  const MinimizedPlayer = () => (
-    <button
-      onClick={() => {
-        setIsMinimized(false)
-        gsap.to(containerRef.current, {
-          width: 280,
-          height: 'auto',
-          duration: 0.4,
-          ease: 'power2.inOut'
-        })
-      }}
-      className="relative w-12 h-12 glass-card-strong rounded-full flex items-center justify-center hover:scale-105 transition-transform"
-    >
-      <svg className="absolute inset-0 w-full h-full -rotate-90">
-        <circle 
-          cx="24" 
-          cy="24" 
-          r="20" 
-          fill="none" 
-          stroke="rgba(0, 168, 232, 0.2)" 
-          strokeWidth="3" 
-        />
-        <circle
-          cx="24"
-          cy="24"
-          r="20"
-          fill="none"
-          stroke="#00a8e8"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeDasharray={`${progress * 1.26} 126`}
-          className="transition-all duration-300"
-        />
-      </svg>
-      
-      <div className="relative z-10">
-        <Music className={`w-5 h-5 text-frutiger-dark ${isPlaying ? 'animate-pulse' : ''}`} />
-      </div>
-      
-      {isPlaying && (
-        <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-frutiger-cyan rounded-full animate-pulse border-2 border-white" />
-      )}
-    </button>
-  )
-
-  return (
-    <>
-      {/* Desktop - always full player */}
-      <div className="hidden lg:block fixed bottom-6 right-6 z-50">
-        {showTooltip && (
-          <div className="absolute bottom-full right-0 mb-3 glass-card-strong px-4 py-2 rounded-xl whitespace-nowrap animate-bounce">
-            <span className="text-sm text-frutiger-dark">Click to play Frutiger music!</span>
-            <div className="absolute -bottom-2 right-6 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-white/30" />
-          </div>
-        )}
-        <FullPlayer />
-      </div>
-
-      {/* Mobile - smooth transitions */}
-      <div className="lg:hidden fixed bottom-6 right-6 z-50">
-        {showTooltip && !isMinimized && (
-          <div className="absolute bottom-full right-0 mb-3 glass-card-strong px-4 py-2 rounded-xl whitespace-nowrap animate-bounce">
-            <span className="text-sm text-frutiger-dark">Click to play Frutiger music!</span>
-            <div className="absolute -bottom-2 right-6 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-white/30" />
-          </div>
-        )}
-        
-        <div 
-          ref={containerRef}
-          className="overflow-hidden"
-          style={{ width: isMinimized ? 48 : 280 }}
-        >
-          <div ref={playerRef}>
-            {isMinimized ? <MinimizedPlayer /> : <FullPlayer />}
-          </div>
-        </div>
-      </div>
-    </>
   )
 }
 
