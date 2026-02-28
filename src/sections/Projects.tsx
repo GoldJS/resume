@@ -9,16 +9,17 @@ const Projects = () => {
   const sectionRef = useRef<HTMLElement>(null)
   const trackRef = useRef<HTMLDivElement>(null)
   const [activeProject, setActiveProject] = useState<number | null>(null)
-  const scrollTriggerRef = useRef<ScrollTrigger | null>(null)
 
   useEffect(() => {
+    // Only run horizontal scroll on desktop (lg and up)
+    if (window.innerWidth < 1024) return
+
     const ctx = gsap.context(() => {
-      // Horizontal scroll animation
       const track = trackRef.current
       if (track) {
         const scrollWidth = track.scrollWidth - window.innerWidth + 100
 
-        const tween = gsap.to(track, {
+        gsap.to(track, {
           x: -scrollWidth,
           ease: 'none',
           scrollTrigger: {
@@ -30,8 +31,6 @@ const Projects = () => {
             anticipatePin: 1,
           }
         })
-
-        scrollTriggerRef.current = tween.scrollTrigger as ScrollTrigger
 
         // Card skew based on scroll velocity
         const cards = track.querySelectorAll('.project-card')
@@ -53,54 +52,6 @@ const Projects = () => {
     }, sectionRef)
 
     return () => ctx.revert()
-  }, [])
-
-  // Touch swipe support for mobile
-  useEffect(() => {
-    const section = sectionRef.current
-    if (!section) return
-
-    let touchStartY = 0
-    let touchStartX = 0
-    let isInProjectsSection = false
-
-    const handleTouchStart = (e: TouchEvent) => {
-      const rect = section.getBoundingClientRect()
-      isInProjectsSection = e.touches[0].clientY >= rect.top && e.touches[0].clientY <= rect.bottom
-      
-      if (isInProjectsSection) {
-        touchStartY = e.touches[0].clientY
-        touchStartX = e.touches[0].clientX
-      }
-    }
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!isInProjectsSection || !scrollTriggerRef.current) return
-
-      const touchY = e.touches[0].clientY
-      const touchX = e.touches[0].clientX
-      const deltaY = touchStartY - touchY
-      const deltaX = touchStartX - touchX
-
-      // If vertical swipe is stronger than horizontal, treat as scroll
-      if (Math.abs(deltaY) > 0 || Math.abs(deltaX) > 0) {
-        // Convert vertical swipe to scroll progress
-        const progress = scrollTriggerRef.current.progress
-        const scrollAmount = (Math.abs(deltaY) > Math.abs(deltaX) ? deltaY : deltaX) * 0.002 // Adjust sensitivity
-        const newProgress = Math.max(0, Math.min(1, progress + scrollAmount))
-        
-        scrollTriggerRef.current.scroll(newProgress * scrollTriggerRef.current.end)
-        touchStartY = touchY
-      }
-    }
-
-    section.addEventListener('touchstart', handleTouchStart, { passive: true })
-    section.addEventListener('touchmove', handleTouchMove, { passive: true })
-
-    return () => {
-      section.removeEventListener('touchstart', handleTouchStart)
-      section.removeEventListener('touchmove', handleTouchMove)
-    }
   }, [])
 
   const projects = [
@@ -164,7 +115,8 @@ const Projects = () => {
         ))}
       </div>
 
-      <div className="h-screen flex flex-col justify-center">
+      {/* Desktop: Horizontal Scroll Layout */}
+      <div className="hidden lg:flex h-screen flex-col justify-center">
         {/* Section Header */}
         <div className="px-4 sm:px-6 lg:px-8 mb-12">
           <div className="max-w-7xl mx-auto">
@@ -272,6 +224,90 @@ const Projects = () => {
             </div>
             <span className="text-sm text-frutiger-dark/60">Scroll to explore</span>
           </div>
+        </div>
+      </div>
+
+      {/* Mobile: 2x2 Grid Layout */}
+      <div className="lg:hidden py-20 px-4">
+        {/* Section Header */}
+        <div className="mb-8 text-center">
+          <span className="inline-block px-4 py-2 glass-card rounded-full text-sm font-medium text-frutiger-blue mb-4">
+            Portfolio
+          </span>
+          <h2 className="text-3xl font-bold text-frutiger-dark mb-4">
+            Selected <span className="text-gradient">Works</span>
+          </h2>
+          <p className="text-base text-frutiger-dark/70 max-w-md mx-auto">
+            A collection of projects that showcase my passion for creating beautiful, functional digital experiences.
+          </p>
+        </div>
+
+        {/* 2x2 Grid */}
+        <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+          {projects.map((project, index) => (
+            <div
+              key={index}
+              className="project-card"
+              onTouchStart={() => setActiveProject(index)}
+              onTouchEnd={() => setActiveProject(null)}
+              onClick={() => setActiveProject(activeProject === index ? null : index)}
+            >
+              <div className="glass-card-strong rounded-2xl overflow-hidden h-full group active:scale-95 transition-all duration-300">
+                {/* Image - smaller aspect ratio for mobile */}
+                <div className="relative aspect-square overflow-hidden">
+                  <img 
+                    src={project.image}
+                    alt={project.title}
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Bubble overlay on touch */}
+                  <div className={`absolute inset-0 bg-gradient-to-t ${project.color} opacity-0 group-active:opacity-30 transition-opacity duration-300`} />
+                  
+                  {/* Touch Actions - appear on tap */}
+                  <div className={`absolute inset-0 flex items-center justify-center gap-3 transition-all duration-300 ${
+                    activeProject === index ? 'opacity-100' : 'opacity-0'
+                  }`}>
+                    <a 
+                      href={project.liveUrl}
+                      className="glass-button p-2 rounded-full"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                    <a 
+                      href={project.githubUrl}
+                      className="glass-button p-2 rounded-full"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Github className="w-4 h-4" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Content - compact for mobile */}
+                <div className="p-3">
+                  <h3 className="text-sm font-bold text-frutiger-dark mb-1 line-clamp-1">
+                    {project.title}
+                  </h3>
+                  <p className="text-xs text-frutiger-dark/70 mb-2 line-clamp-2">
+                    {project.description}
+                  </p>
+                  
+                  {/* Tags - fewer on mobile */}
+                  <div className="flex flex-wrap gap-1">
+                    {project.tags.slice(0, 2).map((tag, tagIndex) => (
+                      <span 
+                        key={tagIndex}
+                        className="px-2 py-0.5 glass-card rounded-full text-[10px] font-medium text-frutiger-blue"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
