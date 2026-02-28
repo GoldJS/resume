@@ -1,0 +1,71 @@
+/* App-specific styles */
+
+/* Smooth scrolling for the entire page */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom selection color */
+::selection {
+  background: rgba(0, 168, 232, 0.3);
+  color: inherit;
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Will change for performance */
+.will-change-transform {
+  will-change: transform;
+}
+
+/* Custom cursor styles (optional enhancement) */
+@media (pointer: fine) {
+  .custom-cursor {
+    cursor: none;
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Mobile touch improvements */
+@media (hover: none) {
+  .glass-button:hover {
+    transform: none;
+  }
+  
+  .skill-card:hover {
+    transform: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .glass-card,
+  .glass-card-strong {
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid #00a8e8;
+  }
+}
