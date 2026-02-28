@@ -214,9 +214,9 @@ const MusicPlayer = () => {
           <PlayerContent />
         </div>
 
-        {/* Navbar bubble - moved to right-28 for better spacing */}
+        {/* Navbar bubble - FIXED POSITION: top-5 right-14 */}
         <div 
-          className={`fixed top-4 right-28 z-50 transition-all duration-500 ease-out ${
+          className={`fixed top-5 right-14 z-50 transition-all duration-500 ease-out ${
             isInNavbar ? 'translate-y-0 opacity-100' : '-translate-y-20 opacity-0 pointer-events-none'
           }`}
         >
@@ -230,41 +230,43 @@ const MusicPlayer = () => {
             <PlayerContent />
           </div>
 
-          {/* Circle button with individual song progress */}
+          {/* Circle button - FIXED: smaller size, better spacing */}
           <button
             ref={bubbleRef}
             onClick={() => setIsExpanded(!isExpanded)}
-            className="relative w-10 h-10 glass-card-strong rounded-full flex items-center justify-center active:scale-95 transition-transform"
+            className="relative w-9 h-9 glass-card-strong rounded-full flex items-center justify-center active:scale-95 transition-transform"
           >
-            {/* Progress ring - individual song progress */}
+            {/* Progress ring - FIXED: r=15 so icon doesn't touch edges */}
             <svg className="absolute inset-0 w-full h-full -rotate-90">
               <circle 
-                cx="20" 
-                cy="20" 
-                r="18" 
+                cx="18" 
+                cy="18" 
+                r="15" 
                 fill="none" 
                 stroke="rgba(0, 168, 232, 0.2)" 
                 strokeWidth="2" 
               />
               <circle
-                cx="20"
-                cy="20"
-                r="18"
+                cx="18"
+                cy="18"
+                r="15"
                 fill="none"
                 stroke="#00a8e8"
                 strokeWidth="2"
                 strokeLinecap="round"
-                strokeDasharray={`${progress * 1.13} 113`}
+                strokeDasharray={`${progress * 0.94} 94`}
                 className="transition-all duration-300"
               />
             </svg>
             
-            {/* Music icon - slightly smaller to fit inside ring */}
-            <Music className={`w-4 h-4 text-frutiger-dark relative z-10 ${isPlaying ? 'animate-pulse' : ''}`} />
+            {/* Icon - FIXED: centered with proper sizing */}
+            <div className="relative z-10 flex items-center justify-center w-full h-full">
+              <Music className={`w-3.5 h-3.5 text-frutiger-dark ${isPlaying ? 'animate-pulse' : ''}`} />
+            </div>
             
             {/* Playing indicator dot */}
             {isPlaying && !isExpanded && (
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-frutiger-cyan rounded-full animate-pulse border-2 border-white" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-frutiger-cyan rounded-full animate-pulse border-2 border-white" />
             )}
           </button>
         </div>
