@@ -15,7 +15,8 @@ const MusicPlayer = () => {
   const playerRef = useRef<HTMLDivElement>(null)
   const bubbleRef = useRef<HTMLButtonElement>(null)
   const popupRef = useRef<HTMLDivElement>(null)
-  const waveBarsRef = useRef<HTMLDivElement[]>([])
+  // FIXED: Use a single ref for wave container instead of array of refs
+  const waveContainerRef = useRef<HTMLDivElement>(null)
 
   const playlist = useMemo(() => [
     {
@@ -68,7 +69,7 @@ const MusicPlayer = () => {
     if (wasPlaying) {
       audioRef.current.play().catch(() => setIsPlaying(false))
     }
-  }, [currentTrack, playlist])
+  }, [currentTrack, playlist, isPlaying, isMuted])
 
   // Handle play/pause/mute
   useEffect(() => {
@@ -101,17 +102,21 @@ const MusicPlayer = () => {
       rafId = requestAnimationFrame(updateProgress)
     }
 
-    audio.addEventListener('play', () => {
+    const handlePlay = () => {
       rafId = requestAnimationFrame(updateProgress)
-    })
-    audio.addEventListener('pause', () => {
+    }
+    
+    const handlePause = () => {
       cancelAnimationFrame(rafId)
-    })
+    }
+
+    audio.addEventListener('play', handlePlay)
+    audio.addEventListener('pause', handlePause)
 
     return () => {
       cancelAnimationFrame(rafId)
-      audio.removeEventListener('play', updateProgress)
-      audio.removeEventListener('pause', updateProgress)
+      audio.removeEventListener('play', handlePlay)
+      audio.removeEventListener('pause', handlePause)
     }
   }, [currentTrack])
 
@@ -184,27 +189,28 @@ const MusicPlayer = () => {
     setCurrentTrack(prev => (prev - 1 + playlist.length) % playlist.length)
   }, [playlist.length])
 
-  // Static wave bars - no re-renders
+  // FIXED: Simplified wave bars with CSS classes only
   const WaveBars = useMemo(() => (
-    <div className="flex items-end gap-0.5 h-6">
+    <div className="flex items-end gap-0.5 h-6" ref={waveContainerRef}>
       {[0, 1, 2, 3].map((i) => (
         <div
           key={i}
-          ref={el => el && (waveBarsRef.current[i] = el)}
-          className="w-1 bg-frutiger-blue rounded-full"
-          style={{
+          className={`w-1 bg-frutiger-blue rounded-full ${
+            isPlaying && !isMuted ? 'animate-wave' : ''
+          }`}
+          style={{ 
             height: '16px',
-            transition: 'transform 0.2s ease',
+            animationDelay: `${i * 0.1}s`,
             transform: isPlaying && !isMuted ? 'scaleY(1)' : 'scaleY(0.3)',
             transformOrigin: 'bottom',
-            animation: isPlaying && !isMuted ? `wave 0.5s ease-in-out infinite ${i * 0.1}s` : 'none'
+            transition: 'transform 0.2s ease'
           }}
         />
       ))}
     </div>
-  ), [isPlaying, isMuted]) // Only re-render when play state changes
+  ), [isPlaying, isMuted])
 
-  const PlayerContent = () => (
+  const PlayerContent = useMemo(() => () => (
     <div className="glass-card-strong p-3 rounded-2xl flex flex-col gap-2 w-[280px]">
       <div className="flex items-center justify-between px-1">
         <span className="text-xs text-frutiger-dark/70 font-medium">
@@ -222,7 +228,7 @@ const MusicPlayer = () => {
 
         {WaveBars}
 
-        <div className="flex items-center gap-1 touch-none">
+        <div className="flex items-center gap-1">
           <button
             onClick={prevTrack}
             className="p-1.5 rounded-xl transition-colors active:bg-white/30"
@@ -254,7 +260,7 @@ const MusicPlayer = () => {
         </div>
       </div>
     </div>
-  )
+  ), [currentTrack, isPlaying, isMuted, playlist.length, WaveBars, prevTrack, nextTrack, togglePlay, toggleMute])
 
   return (
     <>
@@ -274,7 +280,7 @@ const MusicPlayer = () => {
         {/* Hero player */}
         <div 
           ref={playerRef}
-          className={`fixed bottom-6 right-6 will-change-transform ${
+          className={`fixed bottom-6 right-6 will-change-transform transition-opacity duration-300 ${
             isInNavbar ? 'opacity-0 pointer-events-none z-30' : 'opacity-100 z-40'
           }`}
           style={{ transform: 'translateX(0)' }}
