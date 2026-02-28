@@ -9,9 +9,7 @@ const Projects = () => {
   const sectionRef = useRef<HTMLElement>(null)
   const trackRef = useRef<HTMLDivElement>(null)
   const [activeProject, setActiveProject] = useState<number | null>(null)
-  const [mouseX, setMouseX] = useState(0)
-  const [isInSection, setIsInSection] = useState(false)
-  const scrollTriggerRef = useRef<ScrollTrigger | null>(null)
+  const scrollTriggerInstance = useRef<ScrollTrigger | null>(null)
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -19,7 +17,7 @@ const Projects = () => {
       if (track) {
         const scrollWidth = track.scrollWidth - window.innerWidth + 100
 
-        // Create the horizontal scroll animation
+        // Horizontal scroll animation - EXACTLY as original
         const tween = gsap.to(track, {
           x: -scrollWidth,
           ease: 'none',
@@ -33,9 +31,9 @@ const Projects = () => {
           }
         })
 
-        scrollTriggerRef.current = tween.scrollTrigger as ScrollTrigger
+        scrollTriggerInstance.current = tween.scrollTrigger as ScrollTrigger
 
-        // Card skew based on scroll velocity
+        // Card skew based on scroll velocity - EXACTLY as original
         const cards = track.querySelectorAll('.project-card')
         ScrollTrigger.create({
           trigger: sectionRef.current,
@@ -57,33 +55,36 @@ const Projects = () => {
     return () => ctx.revert()
   }, [])
 
-  // Track mouse position and enable/disable scroll trigger
+  // Mouse position detection for dead zone
   useEffect(() => {
+    const section = sectionRef.current
+    if (!section || !scrollTriggerInstance.current) return
+
     const handleMouseMove = (e: MouseEvent) => {
-      setMouseX(e.clientX)
-      
-      const section = sectionRef.current
-      if (!section || !scrollTriggerRef.current) return
+      // Only on desktop (lg breakpoint and up)
+      if (window.innerWidth < 1024) {
+        scrollTriggerInstance.current?.enable()
+        return
+      }
 
       const rect = section.getBoundingClientRect()
       const inSection = e.clientY >= rect.top && e.clientY <= rect.bottom
-      setIsInSection(inSection)
+      
+      if (!inSection) return
 
-      // Only on desktop (width > 1024px)
-      if (window.innerWidth > 1024 && inSection) {
-        const centerStart = window.innerWidth * 0.25  // 25% from left
-        const centerEnd = window.innerWidth * 0.75    // 75% from left (50% center dead zone)
-        
-        const inCenterZone = e.clientX > centerStart && e.clientX < centerEnd
-        
-        if (inCenterZone) {
-          scrollTriggerRef.current.disable()
-        } else {
-          scrollTriggerRef.current.enable()
-        }
-      } else if (window.innerWidth <= 1024) {
-        // Always enabled on mobile/tablet
-        scrollTriggerRef.current.enable()
+      // Calculate center dead zone (50% of screen width)
+      const screenWidth = window.innerWidth
+      const deadZoneStart = screenWidth * 0.25  // 25% from left
+      const deadZoneEnd = screenWidth * 0.75    // 75% from left
+      
+      const inDeadZone = e.clientX >= deadZoneStart && e.clientX <= deadZoneEnd
+      
+      if (inDeadZone) {
+        // In center - kill the scroll trigger temporarily
+        scrollTriggerInstance.current?.disable()
+      } else {
+        // In edge zones - enable it
+        scrollTriggerInstance.current?.enable()
       }
     }
 
@@ -168,7 +169,7 @@ const Projects = () => {
           </div>
         </div>
 
-        {/* Horizontal Scroll Track */}
+        {/* Horizontal Scroll Track - EXACTLY as original */}
         <div 
           ref={trackRef}
           className="flex gap-8 px-4 sm:px-6 lg:px-8 will-change-transform"
@@ -252,7 +253,7 @@ const Projects = () => {
           <div className="flex-shrink-0 w-[10vw]" />
         </div>
 
-        {/* Scroll Indicator */}
+        {/* Scroll Indicator - EXACTLY as original */}
         <div className="px-4 sm:px-6 lg:px-8 mt-8">
           <div className="max-w-7xl mx-auto flex items-center gap-4">
             <div className="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
