@@ -9,16 +9,15 @@ const Projects = () => {
   const sectionRef = useRef<HTMLElement>(null)
   const trackRef = useRef<HTMLDivElement>(null)
   const [activeProject, setActiveProject] = useState<number | null>(null)
-  const scrollTriggerInstance = useRef<ScrollTrigger | null>(null)
 
   useEffect(() => {
     const ctx = gsap.context(() => {
+      // Horizontal scroll animation
       const track = trackRef.current
       if (track) {
         const scrollWidth = track.scrollWidth - window.innerWidth + 100
 
-        // Horizontal scroll animation - EXACTLY as original
-        const tween = gsap.to(track, {
+        gsap.to(track, {
           x: -scrollWidth,
           ease: 'none',
           scrollTrigger: {
@@ -31,9 +30,7 @@ const Projects = () => {
           }
         })
 
-        scrollTriggerInstance.current = tween.scrollTrigger as ScrollTrigger
-
-        // Card skew based on scroll velocity - EXACTLY as original
+        // Card skew based on scroll velocity
         const cards = track.querySelectorAll('.project-card')
         ScrollTrigger.create({
           trigger: sectionRef.current,
@@ -53,43 +50,6 @@ const Projects = () => {
     }, sectionRef)
 
     return () => ctx.revert()
-  }, [])
-
-  // Mouse position detection for dead zone
-  useEffect(() => {
-    const section = sectionRef.current
-    if (!section || !scrollTriggerInstance.current) return
-
-    const handleMouseMove = (e: MouseEvent) => {
-      // Only on desktop (lg breakpoint and up)
-      if (window.innerWidth < 1024) {
-        scrollTriggerInstance.current?.enable()
-        return
-      }
-
-      const rect = section.getBoundingClientRect()
-      const inSection = e.clientY >= rect.top && e.clientY <= rect.bottom
-      
-      if (!inSection) return
-
-      // Calculate center dead zone (50% of screen width)
-      const screenWidth = window.innerWidth
-      const deadZoneStart = screenWidth * 0.25  // 25% from left
-      const deadZoneEnd = screenWidth * 0.75    // 75% from left
-      
-      const inDeadZone = e.clientX >= deadZoneStart && e.clientX <= deadZoneEnd
-      
-      if (inDeadZone) {
-        // In center - kill the scroll trigger temporarily
-        scrollTriggerInstance.current?.disable()
-      } else {
-        // In edge zones - enable it
-        scrollTriggerInstance.current?.enable()
-      }
-    }
-
-    window.addEventListener('mousemove', handleMouseMove)
-    return () => window.removeEventListener('mousemove', handleMouseMove)
   }, [])
 
   const projects = [
@@ -117,16 +77,16 @@ const Projects = () => {
       image: '/images/project-3.jpg',
       tags: ['Python', 'HTML 5', 'Javascript'],
       liveUrl: '#',
-      githubUrl: 'https://github.com/GoldJS/img-upscaler',
+      githubUrl: 'https://github.com/GoldJS/img-upscaler  ',
       color: 'from-green-400 to-emerald-400'
     },
     {
       title: 'A1EMU',
       description: 'An All in One Emulator',
       image: '/images/project-4.jpg',
-      tags: ['RUST', 'C++'],
+      tags: ['RUST', 'C++',],
       liveUrl: '#',
-      githubUrl: 'https://github.com/GoldJS/A1EMU',
+      githubUrl: 'https://github.com/GoldJS/A1EMU  ',
       color: 'from-orange-400 to-red-400'
     }
   ]
@@ -169,7 +129,7 @@ const Projects = () => {
           </div>
         </div>
 
-        {/* Horizontal Scroll Track - EXACTLY as original */}
+        {/* Horizontal Scroll Track */}
         <div 
           ref={trackRef}
           className="flex gap-8 px-4 sm:px-6 lg:px-8 will-change-transform"
@@ -253,7 +213,7 @@ const Projects = () => {
           <div className="flex-shrink-0 w-[10vw]" />
         </div>
 
-        {/* Scroll Indicator - EXACTLY as original */}
+        {/* Scroll Indicator */}
         <div className="px-4 sm:px-6 lg:px-8 mt-8">
           <div className="max-w-7xl mx-auto flex items-center gap-4">
             <div className="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
