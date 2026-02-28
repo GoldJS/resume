@@ -1,5 +1,3 @@
-// MusicPlayer.tsx - Complete fixed version
-
 import { useState, useRef, useEffect } from 'react'
 import { Music, Volume2, VolumeX, Play, Pause, SkipForward, SkipBack } from 'lucide-react'
 import { gsap } from 'gsap'
@@ -176,11 +174,13 @@ const MusicPlayer = () => {
             <div
               key={`wave-${i}`}
               className={`w-1 bg-frutiger-blue rounded-full ${
-                isPlaying && !isMuted ? 'animate-wave' : 'h-1'
+                isPlaying && !isMuted ? 'animate-wave' : ''
               }`}
               style={{ 
                 animationDelay: `${i * 0.1}s`,
-                height: isPlaying && !isMuted ? '16px' : '4px'
+                height: isPlaying && !isMuted ? '16px' : '4px',
+                transform: !isPlaying || isMuted ? 'scaleY(0.3)' : 'scaleY(1)',
+                transition: 'height 0.3s ease'
               }}
             />
           ))}
