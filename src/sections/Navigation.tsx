@@ -1,279 +1,138 @@
-import { useState, useRef, useEffect } from 'react'
-import { Music, Volume2, VolumeX, Play, Pause, SkipForward, SkipBack } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { Menu, X } from 'lucide-react'
 
-const MusicPlayer = () => {
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [isMuted, setIsMuted] = useState(false)
-  const [showTooltip, setShowTooltip] = useState(true)
-  const [currentTrack, setCurrentTrack] = useState(0)
-  const [isExpanded, setIsExpanded] = useState(false)
-  const [isInNavbar, setIsInNavbar] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const playerRef = useRef<HTMLDivElement>(null)
-  const bubbleRef = useRef<HTMLButtonElement>(null)
-  const popupRef = useRef<HTMLDivElement>(null)
+gsap.registerPlugin(ScrollTrigger)
 
-  const playlist = [
-    {
-      url: '/music/Infinity Frequencies - Traces.mp3',
-      title: 'Traces - Infinity Frequencies'
-    },
-    {
-      url: '/music/Mii Editor - Mii Maker (Wii U) Music.mp3',
-      title: 'Mii Editor in Mii Maker (Wii U)'
-    },
-    {
-      url: '/music/scizzie - aquatic ambience.mp3',
-      title: 'Aquatic Ambience - scizzie'
-    }
+const Navigation = () => {
+  const navRef = useRef<HTMLElement>(null)
+  const [isScrolled, setIsScrolled] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  const navItems = [
+    { label: 'Home', href: '#hero' },
+    { label: 'About', href: '#about' },
+    { label: 'Education', href: '#education' },
+    { label: 'Skills', href: '#skills' },
+    { label: 'Projects', href: '#projects' },
+    { label: 'Contact', href: '#contact' },
   ]
 
-  // Track individual song progress
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-
-    const updateProgress = () => {
-      if (audio.duration) {
-        const percent = (audio.currentTime / audio.duration) * 100
-        setProgress(percent)
-      }
-    }
-
-    audio.addEventListener('timeupdate', updateProgress)
-    return () => audio.removeEventListener('timeupdate', updateProgress)
-  }, [currentTrack])
-
-  // Scroll-linked animation
   useEffect(() => {
     const handleScroll = () => {
-      const heroSection = document.getElementById('hero')
-      if (!heroSection || !playerRef.current) return
-
-      const heroRect = heroSection.getBoundingClientRect()
-      const heroHeight = heroRect.height
-      const scrollProgress = Math.max(0, Math.min(1, -heroRect.top / (heroHeight * 0.5)))
-      
-      gsap.to(playerRef.current, {
-        x: scrollProgress * window.innerWidth,
-        opacity: 1 - scrollProgress,
-        duration: 0.1,
-        ease: 'none'
-      })
-
-      if (scrollProgress > 0.8 && !isInNavbar) {
-        setIsInNavbar(true)
-      } else if (scrollProgress <= 0.8 && isInNavbar) {
-        setIsInNavbar(false)
-        setIsExpanded(false)
-      }
+      setIsScrolled(window.scrollY > 100)
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
-    handleScroll()
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [isInNavbar])
-
-  useEffect(() => {
-    audioRef.current = new Audio(playlist[currentTrack].url)
-    audioRef.current.loop = true
-    audioRef.current.volume = 0.3
-
-    const tooltipTimer = setTimeout(() => {
-      setShowTooltip(false)
-    }, 5000)
-
-    return () => {
-      clearTimeout(tooltipTimer)
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current = null
-      }
-    }
   }, [])
 
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.src = playlist[currentTrack].url
-      setProgress(0)
-      if (isPlaying && !isMuted) {
-        audioRef.current.play().catch(() => setIsPlaying(false))
-      }
-    }
-  }, [currentTrack])
+    const ctx = gsap.context(() => {
+      gsap.fromTo(navRef.current,
+        { y: -100, opacity: 0 },
+        { y: 0, opacity: 1, duration: 1, ease: 'power3.out', delay: 2 }
+      )
+    }, navRef)
 
-  useEffect(() => {
-    if (audioRef.current) {
-      if (isPlaying && !isMuted) {
-        audioRef.current.play().catch(() => setIsPlaying(false))
-      } else {
-        audioRef.current.pause()
-      }
-    }
-  }, [isPlaying, isMuted])
+    return () => ctx.revert()
+  }, [])
 
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.muted = isMuted
-    }
-  }, [isMuted])
-
-  const togglePlay = () => setIsPlaying(!isPlaying)
-  const toggleMute = () => setIsMuted(!isMuted)
-  const nextTrack = () => setCurrentTrack((prev) => (prev + 1) % playlist.length)
-  const prevTrack = () => setCurrentTrack((prev) => (prev - 1 + playlist.length) % playlist.length)
-
-  useEffect(() => {
-    if (!isExpanded) return
-    
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as Node
-      const isInsideBubble = bubbleRef.current?.contains(target)
-      const isInsidePopup = popupRef.current?.contains(target)
-      
-      if (!isInsideBubble && !isInsidePopup) {
-        setIsExpanded(false)
-      }
-    }
-
-    document.addEventListener('click', handleClick, true)
-    return () => document.removeEventListener('click', handleClick, true)
-  }, [isExpanded])
-
-  const PlayerContent = () => (
-    <div className="glass-card-strong p-3 rounded-2xl flex flex-col gap-2 w-[280px]">
-      <div className="flex items-center justify-between px-1">
-        <span className="text-xs text-frutiger-dark/70 font-medium">
-          {currentTrack + 1} / {playlist.length}
-        </span>
-        <span className="text-xs text-frutiger-dark truncate max-w-[120px]">
-          {playlist[currentTrack].title}
-        </span>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-xl bg-gradient-to-br from-frutiger-blue to-frutiger-cyan ${isPlaying ? 'animate-pulse' : ''}`}>
-          <Music className="w-4 h-4 text-white" />
-        </div>
-
-        {/* FIXED: Simplified wave animation */}
-        <div className="flex items-end gap-0.5 h-6 flex-1">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className={`w-1 bg-frutiger-blue rounded-full ${isPlaying && !isMuted ? 'animate-wave' : ''}`}
-              style={{
-                height: isPlaying && !isMuted ? '100%' : '4px',
-                animationDelay: `${i * 0.15}s`,
-                animationDuration: '0.6s'
-              }}
-            />
-          ))}
-        </div>
-
-        <div className="flex items-center gap-1">
-          <button onClick={prevTrack} className="p-1.5 hover:bg-white/20 rounded-xl transition-colors">
-            <SkipBack className="w-3 h-3 text-frutiger-dark" />
-          </button>
-          <button onClick={togglePlay} className="p-2 hover:bg-white/20 rounded-xl transition-colors">
-            {isPlaying ? <Pause className="w-4 h-4 text-frutiger-dark" /> : <Play className="w-4 h-4 text-frutiger-dark" />}
-          </button>
-          <button onClick={nextTrack} className="p-1.5 hover:bg-white/20 rounded-xl transition-colors">
-            <SkipForward className="w-3 h-3 text-frutiger-dark" />
-          </button>
-          <button onClick={toggleMute} className="p-2 hover:bg-white/20 rounded-xl transition-colors ml-1">
-            {isMuted ? <VolumeX className="w-4 h-4 text-frutiger-dark/50" /> : <Volume2 className="w-4 h-4 text-frutiger-dark" />}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
+  const scrollToSection = (href: string) => {
+    const element = document.querySelector(href)
+    element?.scrollIntoView({ behavior: 'smooth' })
+    setIsMobileMenuOpen(false)
+  }
 
   return (
     <>
-      {/* Desktop */}
-      <div className="hidden lg:block fixed bottom-6 right-6 z-50">
-        {showTooltip && (
-          <div className="absolute bottom-full right-0 mb-3 glass-card-strong px-4 py-2 rounded-xl whitespace-nowrap animate-bounce">
-            <span className="text-sm text-frutiger-dark">Click to play Frutiger music!</span>
-            <div className="absolute -bottom-2 right-6 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-white/30" />
-          </div>
-        )}
-        <PlayerContent />
-      </div>
-
-      {/* Mobile */}
-      <div className="lg:hidden">
-        {/* Hero player */}
-        <div 
-          ref={playerRef}
-          className="fixed bottom-6 right-6 z-50 will-change-transform"
-          style={{ transform: 'translateX(0)' }}
-        >
-          <PlayerContent />
-        </div>
-
-        {/* FIXED: Position changed to right-16 */}
-        <div 
-          className={`fixed top-5 right-16 z-50 transition-all duration-500 ease-out ${
-            isInNavbar ? 'translate-y-0 opacity-100' : '-translate-y-20 opacity-0 pointer-events-none'
-          }`}
-        >
-          {/* Popup */}
+      <nav 
+        ref={navRef}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+          isScrolled 
+            ? 'py-3' 
+            : 'py-6'
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div 
-            ref={popupRef}
-            className={`absolute top-full right-0 mt-2 transition-all duration-300 ${
-              isExpanded ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-2 pointer-events-none'
+            className={`flex items-center justify-between transition-all duration-500 ${
+              isScrolled 
+                ? 'glass-card-strong px-6 py-3' 
+                : 'bg-transparent'
             }`}
           >
-            <PlayerContent />
-          </div>
+            {/* Logo */}
+            <a 
+              href="#hero" 
+              onClick={(e) => { e.preventDefault(); scrollToSection('#hero') }}
+              className="text-xl font-bold text-gradient"
+            >
+              Portfolio
+            </a>
 
-          {/* Circle button */}
-          <button
-            ref={bubbleRef}
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="relative w-9 h-9 glass-card-strong rounded-full flex items-center justify-center active:scale-95 transition-transform"
-          >
-            {/* FIXED: Added viewBox for proper scaling */}
-            <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
-              <circle 
-                cx="18" 
-                cy="18" 
-                r="15" 
-                fill="none" 
-                stroke="rgba(0, 168, 232, 0.2)" 
-                strokeWidth="2" 
-              />
-              <circle
-                cx="18"
-                cy="18"
-                r="15"
-                fill="none"
-                stroke="#00a8e8"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeDasharray={`${progress * 0.94} 94`}
-                className="transition-all duration-300"
-              />
-            </svg>
-            
-            {/* Icon */}
-            <div className="relative z-10 flex items-center justify-center w-full h-full">
-              <Music className={`w-3.5 h-3.5 text-frutiger-dark ${isPlaying ? 'animate-pulse' : ''}`} />
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center gap-1">
+              {navItems.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  onClick={(e) => { e.preventDefault(); scrollToSection(item.href) }}
+                  className="relative px-4 py-2 text-sm font-medium text-frutiger-dark/80 hover:text-frutiger-blue transition-colors group"
+                >
+                  {item.label}
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-frutiger-cyan group-hover:w-3/4 transition-all duration-300" />
+                </a>
+              ))}
             </div>
-            
-            {/* Playing indicator dot */}
-            {isPlaying && !isExpanded && (
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-frutiger-cyan rounded-full animate-pulse border-2 border-white" />
-            )}
-          </button>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden p-2 glass-card rounded-lg"
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-5 h-5 text-frutiger-dark" />
+              ) : (
+                <Menu className="w-5 h-5 text-frutiger-dark" />
+              )}
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Mobile Menu */}
+      <div 
+        className={`fixed inset-0 z-40 md:hidden transition-all duration-500 ${
+          isMobileMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
+        }`}
+      >
+        <div 
+          className="absolute inset-0 bg-frutiger-dark/20 backdrop-blur-sm"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+        <div 
+          className={`absolute top-20 left-4 right-4 glass-card-strong p-6 transition-all duration-500 ${
+            isMobileMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'
+          }`}
+        >
+          <div className="flex flex-col gap-2">
+            {navItems.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                onClick={(e) => { e.preventDefault(); scrollToSection(item.href) }}
+                className="px-4 py-3 text-lg font-medium text-frutiger-dark/80 hover:text-frutiger-blue hover:bg-white/20 rounded-xl transition-all"
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
         </div>
       </div>
     </>
   )
 }
 
-export default MusicPlayer
+export default Navigation
