@@ -83,10 +83,10 @@ const Projects = () => {
       const deltaX = touchStartX - touchX
 
       // If vertical swipe is stronger than horizontal, treat as scroll
-      if (Math.abs(deltaY) > Math.abs(deltaX)) {
+      if (Math.abs(deltaY) > 0 || Math.abs(deltaX) > 0) {
         // Convert vertical swipe to scroll progress
         const progress = scrollTriggerRef.current.progress
-        const scrollAmount = deltaY * 0.002 // Adjust sensitivity
+        const scrollAmount = (Math.abs(deltaY) > Math.abs(deltaX) ? deltaY : deltaX) * 0.002 // Adjust sensitivity
         const newProgress = Math.max(0, Math.min(1, progress + scrollAmount))
         
         scrollTriggerRef.current.scroll(newProgress * scrollTriggerRef.current.end)
