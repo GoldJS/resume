@@ -12,6 +12,7 @@ const MusicPlayer = () => {
   
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const playerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const playlist = [
     {
@@ -97,21 +98,33 @@ const MusicPlayer = () => {
     }
   }, [isMuted])
 
-  // Scroll to minimize/restore
+  // Smooth scroll to minimize/restore
   useEffect(() => {
     const handleScroll = () => {
       const heroSection = document.getElementById('hero')
-      if (!heroSection) return
+      if (!heroSection || !containerRef.current) return
 
       const heroRect = heroSection.getBoundingClientRect()
       const heroHeight = heroRect.height
       const scrollProgress = Math.max(0, Math.min(1, -heroRect.top / (heroHeight * 0.5)))
       
-      // Minimize when scrolled past hero
+      // Smooth transition using GSAP instead of state toggling
       if (scrollProgress > 0.8 && !isMinimized) {
         setIsMinimized(true)
+        gsap.to(containerRef.current, {
+          width: 48,
+          height: 48,
+          duration: 0.4,
+          ease: 'power2.inOut'
+        })
       } else if (scrollProgress <= 0.8 && isMinimized) {
         setIsMinimized(false)
+        gsap.to(containerRef.current, {
+          width: 280,
+          height: 'auto',
+          duration: 0.4,
+          ease: 'power2.inOut'
+        })
       }
     }
 
@@ -127,7 +140,7 @@ const MusicPlayer = () => {
 
   // Full player content
   const FullPlayer = () => (
-    <div className="glass-card-strong p-3 rounded-2xl flex flex-col gap-2 w-[280px]">
+    <div className="glass-card-strong p-3 rounded-2xl flex flex-col gap-2">
       <div className="flex items-center justify-between px-1">
         <span className="text-xs text-frutiger-dark/70 font-medium">
           {currentTrack + 1} / {playlist.length}
@@ -146,13 +159,13 @@ const MusicPlayer = () => {
           {[...Array(4)].map((_, i) => (
             <div
               key={i}
-              className={`w-1 bg-frutiger-blue rounded-full transition-all duration-300 ${
-                isPlaying && !isMuted ? 'animate-wave' : 'h-1'
+              className={`w-1 bg-frutiger-blue rounded-full ${
+                isPlaying && !isMuted ? 'animate-wave' : ''
               }`}
-              style={{
-                height: isPlaying && !isMuted ? '100%' : '4px',
-                animationDelay: `${i * 0.1}s`,
-                animation: isPlaying && !isMuted ? `wave 0.5s ease-in-out infinite ${i * 0.1}s` : 'none'
+              style={{ 
+                height: isPlaying && !isMuted ? '16px' : '4px',
+                animationDelay: `${i * 0.15}s`,
+                transition: 'height 0.2s ease'
               }}
             />
           ))}
@@ -179,7 +192,15 @@ const MusicPlayer = () => {
   // Minimized ball with progress ring
   const MinimizedPlayer = () => (
     <button
-      onClick={() => setIsMinimized(false)}
+      onClick={() => {
+        setIsMinimized(false)
+        gsap.to(containerRef.current, {
+          width: 280,
+          height: 'auto',
+          duration: 0.4,
+          ease: 'power2.inOut'
+        })
+      }}
       className="relative w-12 h-12 glass-card-strong rounded-full flex items-center justify-center hover:scale-105 transition-transform"
     >
       <svg className="absolute inset-0 w-full h-full -rotate-90">
@@ -227,7 +248,7 @@ const MusicPlayer = () => {
         <FullPlayer />
       </div>
 
-      {/* Mobile - switches between full and minimized */}
+      {/* Mobile - smooth transitions */}
       <div className="lg:hidden fixed bottom-6 right-6 z-50">
         {showTooltip && !isMinimized && (
           <div className="absolute bottom-full right-0 mb-3 glass-card-strong px-4 py-2 rounded-xl whitespace-nowrap animate-bounce">
@@ -236,8 +257,14 @@ const MusicPlayer = () => {
           </div>
         )}
         
-        <div ref={playerRef}>
-          {isMinimized ? <MinimizedPlayer /> : <FullPlayer />}
+        <div 
+          ref={containerRef}
+          className="overflow-hidden"
+          style={{ width: isMinimized ? 48 : 280 }}
+        >
+          <div ref={playerRef}>
+            {isMinimized ? <MinimizedPlayer /> : <FullPlayer />}
+          </div>
         </div>
       </div>
     </>
