@@ -9,6 +9,7 @@ const Projects = () => {
   const sectionRef = useRef<HTMLElement>(null)
   const trackRef = useRef<HTMLDivElement>(null)
   const [activeProject, setActiveProject] = useState<number | null>(null)
+  const scrollTriggerRef = useRef<ScrollTrigger | null>(null)
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -17,7 +18,7 @@ const Projects = () => {
       if (track) {
         const scrollWidth = track.scrollWidth - window.innerWidth + 100
 
-        gsap.to(track, {
+        const tween = gsap.to(track, {
           x: -scrollWidth,
           ease: 'none',
           scrollTrigger: {
@@ -29,6 +30,8 @@ const Projects = () => {
             anticipatePin: 1,
           }
         })
+
+        scrollTriggerRef.current = tween.scrollTrigger as ScrollTrigger
 
         // Card skew based on scroll velocity
         const cards = track.querySelectorAll('.project-card')
@@ -50,6 +53,54 @@ const Projects = () => {
     }, sectionRef)
 
     return () => ctx.revert()
+  }, [])
+
+  // Touch swipe support for mobile
+  useEffect(() => {
+    const section = sectionRef.current
+    if (!section) return
+
+    let touchStartY = 0
+    let touchStartX = 0
+    let isInProjectsSection = false
+
+    const handleTouchStart = (e: TouchEvent) => {
+      const rect = section.getBoundingClientRect()
+      isInProjectsSection = e.touches[0].clientY >= rect.top && e.touches[0].clientY <= rect.bottom
+      
+      if (isInProjectsSection) {
+        touchStartY = e.touches[0].clientY
+        touchStartX = e.touches[0].clientX
+      }
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isInProjectsSection || !scrollTriggerRef.current) return
+
+      const touchY = e.touches[0].clientY
+      const touchX = e.touches[0].clientX
+      const deltaY = touchStartY - touchY
+      const deltaX = touchStartX - touchX
+
+      // If vertical swipe is stronger than horizontal, treat as scroll
+      if (Math.abs(deltaY) > Math.abs(deltaX)) {
+        // Convert vertical swipe to scroll progress
+        const progress = scrollTriggerRef.current.progress
+        const scrollAmount = deltaY * 0.002 // Adjust sensitivity
+        const newProgress = Math.max(0, Math.min(1, progress + scrollAmount))
+        
+        scrollTriggerRef.current.scroll(newProgress * scrollTriggerRef.current.end)
+        touchStartY = touchY
+      }
+    }
+
+    section.addEventListener('touchstart', handleTouchStart, { passive: true })
+    section.addEventListener('touchmove', handleTouchMove, { passive: true })
+
+    return () => {
+      section.removeEventListener('touchstart', handleTouchStart)
+      section.removeEventListener('touchmove', handleTouchMove)
+    }
   }, [])
 
   const projects = [
@@ -77,16 +128,16 @@ const Projects = () => {
       image: '/images/project-3.jpg',
       tags: ['Python', 'HTML 5', 'Javascript'],
       liveUrl: '#',
-      githubUrl: 'https://github.com/GoldJS/img-upscaler  ',
+      githubUrl: 'https://github.com/GoldJS/img-upscaler',
       color: 'from-green-400 to-emerald-400'
     },
     {
       title: 'A1EMU',
       description: 'An All in One Emulator',
       image: '/images/project-4.jpg',
-      tags: ['RUST', 'C++',],
+      tags: ['RUST', 'C++'],
       liveUrl: '#',
-      githubUrl: 'https://github.com/GoldJS/A1EMU  ',
+      githubUrl: 'https://github.com/GoldJS/A1EMU',
       color: 'from-orange-400 to-red-400'
     }
   ]
